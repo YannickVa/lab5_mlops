@@ -6,6 +6,8 @@ metadata:
   labels:
     app: nginx-demo
 spec:
+  nodeSelector:
+    kubernetes.io/os: windows    # Specify Windows nodes
   containers:
   - name: nginx
     image: hello-world-nginx:v1
