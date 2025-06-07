@@ -1,0 +1,42 @@
+name: Kubernetes Deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Create namespace if not exists
+      run: |
+        if ! kubectl get namespace my-namespace 2>/dev/null; then
+          kubectl create namespace my-namespace
+        fi
+      
+    - name: Deploy Pod with random name
+      run: |
+        $podName = "mypod-$(Get-Random)"
+        $yaml = @"
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          name: $podName
+          namespace: my-namespace
+          labels:
+            name: mypod
+        spec:
+          containers:
+          - name: mypod
+            image: rancher/hello-world
+            imagePullPolicy: Always
+"@
+        $yaml | kubectl apply -f -
+        
+    - name: Verify pod is running
+      run: |
+        kubectl get pods -n my-namespace

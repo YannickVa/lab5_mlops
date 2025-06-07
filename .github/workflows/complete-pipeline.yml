@@ -1,0 +1,64 @@
+name: Complete CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-deploy:
+    runs-on: self-hosted
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    # Build and tag Docker image
+    - name: Build Docker image
+      run: |
+        $GIT_SHA = $env:GITHUB_SHA.Substring(0, 7)
+        docker build -t hello-world-nginx:$GIT_SHA .
+        docker tag hello-world-nginx:$GIT_SHA hello-world-nginx:latest
+    
+    # Deploy to Kubernetes using kubectl
+    - name: Deploy to Kubernetes
+      run: |
+        $GIT_SHA = $env:GITHUB_SHA.Substring(0, 7)
+        $POD_NAME = "nginx-pod-$GIT_SHA"
+        
+        # Create namespace if it doesn't exist
+        if (!(kubectl get namespace my-namespace 2>$null)) {
+          kubectl create namespace my-namespace
+        }
+        
+        # Update pod name in YAML
+        $content = Get-Content -Path "k8s/pod.yaml" -Raw
+        $content = $content -replace "name: nginx-pod", "name: $POD_NAME"
+        $content = $content -replace "image: hello-world-nginx:v1", "image: hello-world-nginx:$GIT_SHA"
+        $content | Set-Content -Path "k8s/pod.yaml"
+        
+        # Apply to cluster
+        kubectl apply -f k8s/pod.yaml
+        
+        # Wait for pod to be ready
+        kubectl wait --for=condition=ready pod/$POD_NAME -n my-namespace --timeout=60s
+    
+    # Deploy using Helm
+    - name: Deploy with Helm
+      run: |
+        $GIT_SHA = $env:GITHUB_SHA.Substring(0, 7)
+        
+        # Update Helm values
+        helm upgrade --install nginx-app ./helm-chart `
+          --namespace my-namespace `
+          --create-namespace `
+          --set image.tag=$GIT_SHA `
+          --wait
+        
+    # Verify deployments
+    - name: Verify deployments
+      run: |
+        Write-Host "Checking Kubernetes pods:"
+        kubectl get pods -n my-namespace
+        
+        Write-Host "`nChecking Helm releases:"
+        helm list -n my-namespace
