@@ -19,3 +19,11 @@ We'll follow these steps:
 Let's get started with each step!
 
 ## Step 1: Basic Docker Application Setup
+
+// ...existing content for step 1...
+
+## Questions and Answers
+
+### Q: What did the `multi-line script` return?
+
+A: The multi-line script in the initial GitHub Actions workflow returns "Hello, world!" by default. This is because it was created using the "Simple workflow" template which includes a basic shell script that echoes this message.
