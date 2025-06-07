@@ -1,0 +1,30 @@
+name: Docker Build and Test
+
+on:
+  push:
+    branches: [ main, 01_DockerTest ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Build Docker image
+      run: docker build -t hello-world-nginx:v1 .
+      
+    - name: Run Docker container
+      run: |
+        docker run -d -p 8080:80 --name test-container hello-world-nginx:v1
+        sleep 5  # Give the container time to start
+        
+    - name: Test container is running
+      run: |
+        if ! docker ps | grep test-container; then
+          echo "Container is not running"
+          exit 1
+        fi
